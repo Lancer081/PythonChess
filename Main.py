@@ -22,6 +22,58 @@ depth = 3  # Set the search depth
 window = pygame.display.set_mode((window_width, window_height))
 pygame.display.set_caption("Chess Engine")
 
+# Simple evaluation function (material count)
+def evaluate_board(board):
+    piece_values = {
+        chess.PAWN: 1,
+        chess.KNIGHT: 3,
+        chess.BISHOP: 3,
+        chess.ROOK: 5,
+        chess.QUEEN: 9,
+    }
+
+    score = 0
+    for square in chess.SQUARES:
+        piece = board.piece_at(square)
+        if piece is not None:
+            if piece.color == chess.WHITE:
+                score += piece_values.get(piece.piece_type, 0)
+            else:
+                score -= piece_values.get(piece.piece_type, 0)
+    return score
+
+# Negamax search with simple evaluation and fixed depth
+def negamax(board, depth, maximizing_player):
+    if depth == 0 or board.is_game_over():
+        return evaluate_board(board)
+
+    legal_moves = list(board.legal_moves)
+    best_value = -float('inf')
+
+    for move in legal_moves:
+        board.push(move)
+        value = -negamax(board, depth - 1, not maximizing_player)
+        board.pop()
+        best_value = max(best_value, value)
+
+    return best_value
+
+# Find the best move using negamax with fixed depth
+def find_best_move(board, depth):
+    legal_moves = list(board.legal_moves)
+    best_move = None
+    best_value = -float('inf')
+
+    for move in legal_moves:
+        board.push(move)
+        value = -negamax(board, depth - 1, False)
+        board.pop()
+        if value > best_value:
+            best_value = value
+            best_move = move
+
+    return best_move
+
 # Main loop
 running = True
 while running:
@@ -49,20 +101,8 @@ while running:
     # Check for user input and make moves for the engine
     if not board.is_game_over() and board.turn == chess.WHITE:
         # White's turn - find and make the best move
-        move = chess.Move.null()  # Initialize move as a null move
-        if depth > 0:
-            # Perform minimax search with depth
-            legal_moves = list(board.legal_moves)
-            best_value = -float('inf')
-            for legal_move in legal_moves:
-                board.push(legal_move)
-                value = minimax(board, depth - 1, -float('inf'), float('inf'), False)
-                board.pop()
-                if value > best_value:
-                    best_value = value
-                    move = legal_move
-        if move != chess.Move.null():
-            board.push(move)
+        best_move = find_best_move(board, depth)
+        board.push(best_move)
 
     pygame.display.update()
 
