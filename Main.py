@@ -1,81 +1,70 @@
 import chess
-import chess.svg
-from chessboard import display
+import pygame
+from pygame.locals import *
 
-# Simple evaluation function (material count)
-def evaluate_board(board):
-    piece_values = {
-        chess.PAWN: 1,
-        chess.KNIGHT: 3,
-        chess.BISHOP: 3,
-        chess.ROOK: 5,
-        chess.QUEEN: 9,
-    }
+# Initialize Pygame
+pygame.init()
 
-    score = 0
+# Set the window dimensions
+window_width = 400
+window_height = 400
+
+# Set the square size and colors
+square_size = window_width // 8
+light_color = (255, 206, 158)
+dark_color = (209, 139, 71)
+
+# Initialize the chessboard
+board = chess.Board()
+depth = 3  # Set the search depth
+
+# Create the Pygame window
+window = pygame.display.set_mode((window_width, window_height))
+pygame.display.set_caption("Chess Engine")
+
+# Main loop
+running = True
+while running:
+    for event in pygame.event.get():
+        if event.type == QUIT:
+            running = False
+
+    # Draw the chessboard
+    for y in range(8):
+        for x in range(8):
+            rect = pygame.Rect(x * square_size, y * square_size, square_size, square_size)
+            color = light_color if (x + y) % 2 == 0 else dark_color
+            pygame.draw.rect(window, color, rect)
+
+    # Draw the pieces on the chessboard
     for square in chess.SQUARES:
         piece = board.piece_at(square)
         if piece is not None:
-            if piece.color == chess.WHITE:
-                score += piece_values.get(piece.piece_type, 0)
-            else:
-                score -= piece_values.get(piece.piece_type, 0)
-    return score
+            piece_image = pygame.image.load(f"images/{piece.symbol()}.png")  # Replace with your piece images
+            piece_image = pygame.transform.scale(piece_image, (square_size, square_size))
+            piece_rect = piece_image.get_rect()
+            piece_rect.topleft = (chess.square_file(square) * square_size, chess.square_rank(square) * square_size)
+            window.blit(piece_image, piece_rect)
 
-# Minimax search with simple evaluation and fixed depth
-def minimax(board, depth, maximizing_player):
-    if depth == 0 or board.is_game_over():
-        return evaluate_board(board)
-
-    legal_moves = list(board.legal_moves)
-    if maximizing_player:
-        best_value = -float('inf')
-        for move in legal_moves:
+    # Check for user input and make moves for the engine
+    if not board.is_game_over() and board.turn == chess.WHITE:
+        # White's turn - find and make the best move
+        move = chess.Move.null()  # Initialize move as a null move
+        if depth > 0:
+            # Perform minimax search with depth
+            legal_moves = list(board.legal_moves)
+            best_value = -float('inf')
+            for legal_move in legal_moves:
+                board.push(legal_move)
+                value = minimax(board, depth - 1, -float('inf'), float('inf'), False)
+                board.pop()
+                if value > best_value:
+                    best_value = value
+                    move = legal_move
+        if move != chess.Move.null():
             board.push(move)
-            value = minimax(board, depth - 1, False)
-            best_value = max(best_value, value)
-            board.pop()
-        return best_value
-    else:
-        best_value = float('inf')
-        for move in legal_moves:
-            board.push(move)
-            value = minimax(board, depth - 1, True)
-            best_value = min(best_value, value)
-            board.pop()
-        return best_value
 
-# Find the best move using minimax with fixed depth
-def find_best_move(board, depth):
-    legal_moves = list(board.legal_moves)
-    best_move = None
-    best_value = -float('inf')
+    pygame.display.update()
 
-    for move in legal_moves:
-        board.push(move)
-        value = minimax(board, depth - 1, False)
-        if value > best_value:
-            best_value = value
-            best_move = move
-        board.pop()
-
-    return best_move
-
-# Main function
-def main():
-    board = chess.Board()
-    depth = 3  # Set the search depth
-
-    while not board.is_game_over():
-        display.display(board)
-        if board.turn == chess.WHITE:
-            # White's turn - find and make the best move
-            best_move = find_best_move(board, depth)
-            board.push(best_move)
-        else:
-            # Black's turn - also find and make the best move
-            best_move = find_best_move(board, depth)
-            board.push(best_move)
-
-if __name__ == "__main__":
-    main()
+# Quit Pygame
+pygame.quit()
