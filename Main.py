@@ -42,8 +42,8 @@ def evaluate_board(board):
                 score -= piece_values.get(piece.piece_type, 0)
     return score
 
-# Negamax search with simple evaluation and fixed depth
-def negamax(board, depth, maximizing_player):
+# Negamax search with Alpha-Beta pruning and fixed depth
+def negamax(board, depth, alpha, beta, maximizing_player):
     if depth == 0 or board.is_game_over():
         return evaluate_board(board)
 
@@ -52,24 +52,28 @@ def negamax(board, depth, maximizing_player):
 
     for move in legal_moves:
         board.push(move)
-        value = -negamax(board, depth - 1, not maximizing_player)
+        value = -negamax(board, depth - 1, -beta, -alpha, not maximizing_player)
         board.pop()
         best_value = max(best_value, value)
+        alpha = max(alpha, value)
+        if alpha >= beta:
+            break
 
     return best_value
 
-# Find the best move using negamax with fixed depth
+# Find the best move using negamax with Alpha-Beta pruning and fixed depth
 def find_best_move(board, depth):
     legal_moves = list(board.legal_moves)
     best_move = None
-    best_value = -float('inf')
+    alpha = -float('inf')
+    beta = float('inf')
 
     for move in legal_moves:
         board.push(move)
-        value = -negamax(board, depth - 1, False)
+        value = -negamax(board, depth - 1, -beta, -alpha, False)
         board.pop()
-        if value > best_value:
-            best_value = value
+        if value > alpha:
+            alpha = value
             best_move = move
 
     return best_move
@@ -99,10 +103,15 @@ while running:
             window.blit(piece_image, piece_rect)
 
     # Check for user input and make moves for the engine
-    if not board.is_game_over() and board.turn == chess.WHITE:
-        # White's turn - find and make the best move
-        best_move = find_best_move(board, depth)
-        board.push(best_move)
+    if not board.is_game_over():
+        if board.turn == chess.WHITE:
+            # White's turn - find and make the best move
+            best_move = find_best_move(board, depth)
+            board.push(best_move)
+        else:
+            # Black's turn - find and make the best move
+            best_move = find_best_move(board, depth)
+            board.push(best_move)
 
     pygame.display.update()
 
