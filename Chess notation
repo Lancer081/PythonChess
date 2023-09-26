@@ -2,63 +2,31 @@
 FILES = 8
 RANKS = 8
 
-# Generate a bitboard representing all squares on the board
-all_squares = (1 << (FILES * RANKS)) - 1
+def generate_bishop_moves(square):
+    rank = square // FILES
+    file = square % FILES
 
-# Create masks for diagonals (from bottom-left to top-right)
-diagonal_masks = []
-for shift in range(-7, 8):
-    diagonal_mask = 0
-    for square in range(FILES * RANKS):
-        if (square // FILES - square % FILES) == shift:
-            diagonal_mask |= 1 << square
-    diagonal_masks.append(diagonal_mask)
+    # Define masks for each diagonal and anti-diagonal
+    main_diag_mask = 0x8040201008040201
+    anti_diag_mask = 0x0102040810204080
 
-# Create masks for anti-diagonals (from top-left to bottom-right)
-antidiagonal_masks = []
-for shift in range(0, 15):
-    antidiagonal_mask = 0
-    for square in range(FILES * RANKS):
-        if (square // FILES + square % FILES) == shift:
-            antidiagonal_mask |= 1 << square
-    antidiagonal_masks.append(antidiagonal_mask)
+    # Shift the masks to the correct rank and file
+    main_diag_mask <<= 8 * rank
+    anti_diag_mask <<= 8 * (RANKS - rank - 1)
+    main_diag_mask <<= file
+    anti_diag_mask >>= file
 
-def generate_bishop_moves(square, occupied_squares, friendly_pieces, enemy_pieces):
-    moves = 0
+    # Combine masks for all diagonal directions
+    diagonal_mask = main_diag_mask | anti_diag_mask
 
-    # Get the diagonal and anti-diagonal masks for the given square
-    diagonal_mask = diagonal_masks[square // FILES - square % FILES + 7]
-    antidiagonal_mask = antidiagonal_masks[square // FILES + square % FILES]
+    # Remove the square itself
+    moves = diagonal_mask & ~(1 << square)
 
-    # Calculate moves in the up-right direction (positive rank and file)
-    moves |= diagonal_mask & (all_squares << square)
-
-    # Calculate moves in the up-left direction (positive rank and negative file)
-    moves |= antidiagonal_mask & (all_squares << square)
-
-    # Calculate moves in the down-right direction (negative rank and positive file)
-    moves |= antidiagonal_mask & (all_squares >> square)
-
-    # Calculate moves in the down-left direction (negative rank and file)
-    moves |= diagonal_mask & (all_squares >> square)
-
-    # Exclude the starting square from the moves
-    moves &= ~(1 << square)
-
-    # Apply occupancy, friendly, and enemy piece masks to filter legal moves
-    legal_moves = moves & ~occupied_squares
-    legal_moves &= ~friendly_pieces
-    legal_moves |= enemy_pieces
-
-    return legal_moves
+    return moves
 
 # Example usage:
-square = 27  # Example square: D4
-# Assume the following bitboards:
-occupied_squares = 0b11011011101111011011101101101110
-friendly_pieces = 0b00100000000100000000100000000000
-enemy_pieces = 0b00000000000000000000000000000100
-bishop_legal_moves = generate_bishop_moves(square, occupied_squares, friendly_pieces, enemy_pieces)
+square = 27  # Example square: D4 (in 0-based index)
+bishop_moves = generate_bishop_moves(square)
 
-# Print the binary representation of the legal bishop moves
-print(bin(bishop_legal_moves))
+# Print the binary representation of the bishop moves
+print(bin(bishop_moves))
