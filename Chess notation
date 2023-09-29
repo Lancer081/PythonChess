@@ -1,32 +1,60 @@
-# Define constants for the board dimensions
-FILES = 8
-RANKS = 8
+def is_square_attacked(chessboard, row, col, attacking_color):
+    # Define the opponent's color based on the attacking color
+    opponent_color = 'w' if attacking_color == 'b' else 'b'
 
-def generate_bishop_moves(square):
-    rank = square // FILES
-    file = square % FILES
+    # Check for pawn attacks
+    pawn_attack_squares = []
+    if attacking_color == 'w':
+        # For white pawns, check diagonal squares in front
+        pawn_attack_squares = [(row - 1, col - 1), (row - 1, col + 1)]
+    else:
+        # For black pawns, check diagonal squares in front
+        pawn_attack_squares = [(row + 1, col - 1), (row + 1, col + 1)]
 
-    # Define masks for each diagonal and anti-diagonal
-    main_diag_mask = 0x8040201008040201
-    anti_diag_mask = 0x0102040810204080
+    # Iterate through possible pawn attack squares
+    for pr, pc in pawn_attack_squares:
+        # Ensure the attack square is within the chessboard boundaries
+        if 0 <= pr < 8 and 0 <= pc < 8:
+            piece = chessboard[pr][pc]
+            # Check if the square is occupied by an enemy pawn
+            if piece == opponent_color + 'P':
+                return True
 
-    # Shift the masks to the correct rank and file
-    main_diag_mask <<= 8 * rank
-    anti_diag_mask <<= 8 * (RANKS - rank - 1)
-    main_diag_mask <<= file
-    anti_diag_mask >>= file
+    # Check for knight attacks
+    knight_moves = [(-2, -1), (-2, 1), (-1, -2), (-1, 2),
+                    (1, -2), (1, 2), (2, -1), (2, 1)]
 
-    # Combine masks for all diagonal directions
-    diagonal_mask = main_diag_mask | anti_diag_mask
+    # Iterate through possible knight move offsets
+    for dr, dc in knight_moves:
+        nr, nc = row + dr, col + dc
+        # Ensure the knight move is within the chessboard boundaries
+        if 0 <= nr < 8 and 0 <= nc < 8:
+            piece = chessboard[nr][nc]
+            # Check if the square is occupied by an enemy knight
+            if piece == opponent_color + 'N':
+                return True
 
-    # Remove the square itself
-    moves = diagonal_mask & ~(1 << square)
+    # Check for rook, bishop, queen, and king attacks
+    directions = [(1, 0), (-1, 0), (0, 1), (0, -1),
+                  (1, 1), (-1, -1), (-1, 1), (1, -1)]
 
-    return moves
+    # Iterate through possible attack directions
+    for dr, dc in directions:
+        # Iterate through squares along the direction
+        for i in range(1, 8):
+            nr, nc = row + dr * i, col + dc * i
+            # Ensure the square is within the chessboard boundaries
+            if 0 <= nr < 8 and 0 <= nc < 8:
+                piece = chessboard[nr][nc]
+                # Check if the square is occupied by an enemy rook or queen
+                if piece == opponent_color + 'R' or piece == opponent_color + 'Q':
+                    return True
+                # Check if the square is occupied by an enemy king (if it's an adjacent square)
+                if i == 1 and piece == opponent_color + 'K':
+                    return True
+                # If the square is occupied by any piece, stop checking in this direction
+                if piece != ' ':
+                    break
 
-# Example usage:
-square = 27  # Example square: D4 (in 0-based index)
-bishop_moves = generate_bishop_moves(square)
-
-# Print the binary representation of the bishop moves
-print(bin(bishop_moves))
+    # If no enemy pieces can attack the square, return False
+    return False
